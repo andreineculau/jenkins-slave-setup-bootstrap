@@ -1,0 +1,1 @@
+node-home/slave-setup/env.sh

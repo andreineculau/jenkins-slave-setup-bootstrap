@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+ME=$( basename "$0" )
+. ${DIR}/env.sh
+
+# This script will run on a node after copying NODE_SETUP_HOME to its JENKINS_HOME
+
+section Provisioning node ${NODE_TO_SETUP_NAME}
+
+# see master-before-node-launch
+THIS_REPO_GIT_URL=$(cat slave-setup/GIT_URL)
+THIS_REPO_GIT_COMMIT=$(cat slave-setup/GIT_COMMIT)
+
+echo "DIR=${DIR}"
+echo "ME=${ME}"
+echo "NODE_TO_SETUP_NAME=${NODE_TO_SETUP_NAME}"
+echo "NODE_TO_SETUP_LABELS=${NODE_TO_SETUP_LABELS}"
+echo "HOME=${HOME}" # not ${JENKINS_HOME} but the local jenkins' user ${HOME}
+echo "JENKINS_HOME=${JENKINS_HOME}"
+echo "THIS_REPO_GIT_COMMIT=${THIS_REPO_GIT_COMMIT}"
+
+# ==============================================================================
+# DO STUFF
+
+# ==============================================================================
+# For example:
+# - kill Jenkins zombie processes
+
+section Killing jenkins zombie processes
+
+proc_environ() {
+    [[ ${OSTYPE} = *'darwin'* ]] && {
+        ps -Eww ${1} 2>/dev/null | tail -n+2
+    } || {
+        cat /proc/${1}/environ 2>/dev/null
+    }
+}
+
+mypids=$(ps -o pid= $$) # keep the freakin spaces
+ppid=$$
+while [[ ${ppid} != "0" ]]; do
+    ppid=$(ps -o ppid= ${ppid})
+    mypids="${mypids}\|${ppid}"
+    ppid=$(echo ${ppid} | tr -d '[[:space:]]') # remove prefix spaces or else ps fails
+done
+unset ppid
+mypids="^\(${mypids}\)\$"
+
+for pid in $(ps -u jenkins -o pid | tail -n+2 | grep -v "${mypids}"); do
+    proc_environ ${pid} | \
+        grep -q JENKINS_SERVER_COOKIE && {
+        echo -e "\n= Killing ${pid}"
+        ps -F h --pid ${pid}
+        proc_environ ${pid}
+        kill -9 ${pid}
+        echo "= Killed ${pid}"
+    }
+done
+unset mypids
+
+# ==============================================================================
+# For example:
+# - install necessary packages
+
+section Installing packages
+
+if [[ ${OSTYPE} == *'darwin'* ]]; then
+    [[ $(which brew) ]] || (
+        ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    )
+
+    PKGS (
+        git
+    )
+
+    exe brew install ${PKGS[*]}
+else
+    PKGS=(
+        git
+    )
+
+    exe sudo apt-get install -y ${PKGS[*]}
+fi
+
+# ==============================================================================
+# For example:
+# - symlink to JENKINS_HOME and THIS_REPO_HOME
+
+section Symlinking - convenience
+
+exe rm -rf $(dirname ${THIS_REPO_HOME})
+exe ln -s ${THIS_REPO_HOME} $(dirname ${THIS_REPO_HOME})
+
+if [ "${JENKINS_HOME}" != "${HOME}" ]; then
+    exe rm -rf jenkins-home
+    exe ln -s ${JENKINS_HOME} jenkins-home
+fi
+
+# ==============================================================================
+# DO NOT ADD CODE BELOW THIS LINE
+
+section Creating/Resetting ${THIS_REPO_HOME}
+
+[[ -d ${THIS_REPO_HOME} ]] || {
+    exe mkdir -p ${THIS_REPO_HOME}
+}
+(
+    cd ${THIS_REPO_HOME}
+    exe rm -rf .git
+    exe git init
+    exe git remote add origin ${THIS_REPO_GIT_URL}
+    exe git fetch origin
+    exe git reset --hard ${THIS_REPO_GIT_COMMIT}
+)
+
+${DIR}/common-setup.sh
+
+section Done provisioning node ${NODE_TO_SETUP_NAME}

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+ME=$( basename "$0" )
+. ${DIR}/env.sh
+
+# This script will run on master before launching a node
+
+section Preparing to launch node ${NODE_TO_SETUP_NAME}
+
+echo "DIR=${DIR}"
+echo "ME=${ME}"
+echo "NODE_TO_SETUP_NAME=${NODE_TO_SETUP_NAME}"
+echo "NODE_TO_SETUP_LABELS=${NODE_TO_SETUP_LABELS}"
+echo "HOME=${HOME}" # HOME=${JENKINS_HOME} on master
+echo "JENKINS_HOME=${JENKINS_HOME}"
+
+# ==============================================================================
+# DO STUFF
+
+# ==============================================================================
+# DO NOT ADD CODE BELOW THIS LINE
+
+# Export GIT_URL and GIT_COMMIT so that the nodes will have
+# this same repo checkout out at the same hash
+(
+    cd ${NODE_SETUP_HOME}
+    git config remote.origin.url > GIT_URL
+    git log -1 --format="%H" > GIT_COMMIT
+)
+
+${DIR}/common-setup.sh
+
+section Launching node ${NODE_TO_SETUP_NAME}

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+ME=$( basename "$0" )
+. ${DIR}/env.sh
+
+# This script will run on master after launching a node
+
+section Preparing to copy\nfrom master:${NODE_SETUP_HOME}\nto ${NODE_TO_SETUP_NAME}:${JENKINS_HOME}
+
+echo "DIR=${DIR}"
+echo "ME=${ME}"
+echo "NODE_TO_SETUP_NAME=${NODE_TO_SETUP_NAME}"
+echo "NODE_TO_SETUP_LABELS=${NODE_TO_SETUP_LABELS}"
+echo "HOME=${HOME}" # ${JENKINS_HOME} not /home/jenkins
+echo "JENKINS_HOME=${JENKINS_HOME}"
+
+# ==============================================================================
+# DO STUFF
+
+# ==============================================================================
+# DO NOT ADD CODE BELOW THIS LINE
+
+section Copying\nfrom master:${NODE_SETUP_HOME}\nto ${NODE_TO_SETUP_NAME}:${JENKINS_HOME}
